@@ -1,0 +1,55 @@
+--3 odovzdavka
+----1 pohľad s použitím množinových operácií
+--zobraziť všetky Pokuty z miest Kosice a Bratislava
+select p.Datum, p.Dovod, p.Suma
+from Pokuta p
+join Policajt P2 on P2.id_policajta = p.id_policajta
+intersect
+select p.Datum, p.Dovod, p.Suma
+from Pokuta p
+join oddelenie o on p.id_oddelenia = o.id_oddelenia
+where o.mesto in('Kosice', 'Bratislava')
+order by Datum asc;
+--zobraziť všetky obcan, suma pokuty ktorej >50 a ne nachadza v mieste Poprad
+select concat(o.Meno,' ',o.Priezvisko) as "obcan", o.Tel_kontakt, p.Suma, p.Dovod
+from Pokuta p
+join dostal d on p.id_pokuty = d.id_pokuty
+join obcan o on d.id_obcana = o.id_obcana
+where p.Suma >50
+except
+select concat(o.Meno,' ',o.Priezvisko) as "obcan", o.Tel_kontakt, p.Suma, p.Dovod
+from Pokuta p
+join dostal d on p.id_pokuty = d.id_pokuty
+join obcan o on d.id_obcana = o.id_obcana
+join oddelenie o2 on p.id_oddelenia = o2.id_oddelenia
+where o2.mesto in('Poprad')
+order by "obcan" asc;
+----2 pohľady s použitím vnorených poddopytov.
+--zobraziť všetky policajt z oddelenie ktore ma najviac pokut
+select O.Mesto, concat(p.Meno,' ',p.Priezvisko) as "policajt"
+from policajt p
+join Oddelenie O on O.id_oddelenia = p.id_oddelenia
+where p.id_oddelenia = (
+    select t.id_oddelenia
+    from (
+        select o.id_oddelenia, count(p2.id_pokuty)
+        from oddelenie o
+        join pokuta p2 on o.id_oddelenia = p2.id_oddelenia
+        group by o.id_oddelenia
+        order by count(p2.id_pokuty) desc
+         ) as t
+    limit 1
+);
+--zobraziť všetky policajt ktory vydal pokutu obcan z telefón cislo '+421917823', '+421935162', '+421942876'
+select o.Mesto, concat(p.Meno,' ',p.Priezvisko) as "policajt"
+from policajt p
+join oddelenie o on p.id_oddelenia = o.id_oddelenia
+where exists(
+    select *
+    from obcan o2
+    join dostal d on o2.id_obcana = d.id_obcana
+    join Pokuta P2 on P2.id_pokuty = d.id_pokuty
+    where o2.Tel_kontakt in('+421917823', '+421935162', '+421942876') and p.id_policajta = P2.id_policajta
+          )
+----skript na vytvorenie triggeru/triggerov, ktoré budú implementovať autoinkrementáciu umelých kľúčov
+--

@@ -1,0 +1,308 @@
+CREATE TABLE Pharmacy
+(
+  PRIMARY KEY (ID_pharmacy),
+  Adress VARCHAR(100) NOT NULL,
+  Name VARCHAR(50) NOT NULL,
+  ID_pharmacy INT NOT NULL
+
+);
+
+CREATE TABLE Pharmaceutical_company
+(
+  PRIMARY KEY (ID_company),
+  Name VARCHAR(50) NOT NULL,
+  Adress VARCHAR(100) NOT NULL,
+  Phone_number VARCHAR(20) NOT NULL,
+  ID_company INT NOT NULL
+
+);
+
+CREATE TABLE Doctor
+(
+  PRIMARY KEY (ID_doctor),
+  Name VARCHAR(20) NOT NULL,
+  Speciality VARCHAR(50) NOT NULL,
+  ID_doctor INT NOT NULL,
+  Title VARCHAR(100) NOT NULL
+
+);
+
+CREATE TABLE Patient
+(
+  PRIMARY KEY (PID),
+  FOREIGN KEY (ID_doctor) REFERENCES Doctor(ID_doctor),
+  Birth_number VARCHAR(20) NOT NULL,
+  Insurance_info VARCHAR(255) NOT NULL,
+  Name VARCHAR(20) NOT NULL,
+  Gender VARCHAR(1) NOT NULL,
+  Adress VARCHAR(100) NOT NULL,
+  PID INT NOT NULL,
+  ID_doctor INT NOT NULL
+
+);
+
+CREATE TABLE Drug
+(
+  PRIMARY KEY (ID_sukl),
+  FOREIGN KEY (PID) REFERENCES Patient(PID),
+  FOREIGN KEY (ID_pharmacy) REFERENCES Pharmacy(ID_pharmacy),
+  Name VARCHAR(20) NOT NULL,
+  Expiration_date DATE NOT NULL,
+  Quantity FLOAT NOT NULL,
+  Active_compound VARCHAR(100) NOT NULL,
+  ID_sukl INT NOT NULL,
+  Price FLOAT NOT NULL,
+  PID INT NOT NULL,
+  ID_pharmacy INT NOT NULL
+);
+
+CREATE TABLE Make
+(
+  ID_company INT NOT NULL,
+  ID_sukl INT NOT NULL,
+  PRIMARY KEY (ID_company, ID_sukl),
+  FOREIGN KEY (ID_company) REFERENCES Pharmaceutical_company(ID_company),
+  FOREIGN KEY (ID_sukl) REFERENCES Drug(ID_sukl)
+);
+
+INSERT INTO doctor(name, speciality, id_doctor, title)
+VALUES ('Martin Dorovsky','Anesthesiologists','12431','Doc.'),
+       ('Marcel Zohan','Immunologists','17648','Doc.Mgr.'),
+       ('Daniel Docolomansky','Anesthesiologists','19747','Doc.'),
+       ('Dorota Novakova','Endocrinologists','10375','Doc.Ing.'),
+       ('Slavomir Ander','Gastroenterologists','12435','Doc.'),
+       ('Simona Slavkovska','Immunologists','12958','Doc.');
+
+
+INSERT INTO patient(birth_number, insurance_info, name, gender, adress, pid, id_doctor)
+VALUES('100407/0012','Alergicky na mliecnu bielkovinu','Robert Katusin','M','Kosice, Slovenskej jednoty 36','9534','12431'),
+       ('260303/001','Alergicky na piracetamol','Martin Toth','M','Michalovce, M.R.Stefanika 65','9152','17648'),
+       ('105407/001','Alergicky na solmucoicin','Iveta Bartosova','F','Kosice, Mojzesovej 24','9842','19747'),
+       ('010222/0679','Alergicky na srvatku','Ivan Dobrovsky','M','Trebisov, Varichovska 51','9631','12431'),
+       ('895706/0123',' ','Marta Eliasova','F','Ruzomberok, Narodna trieda 12','9512','19747'),
+       ('735702/0044','Laktozova intolerancia','Alexandra Cizmarova','F','Bratislava, Ivana locha 52','9623','19747');
+
+INSERT INTO pharmaceutical_company(name, adress, phone_number, id_company)
+VALUES('Phoenix a.s.','Bratislava, Pribylinska 38','+421/2 499 99 111','057'),
+       ('ELVA Pharma Kft a.s.','Cernosice, Stanicna 21','+421/2 303 99 490','052'),
+       ('Pharmalabs s.r.o.','Presov, Safarikova 2','+421 491 79 433','054'),
+       ('IMUNA PHARM, a.s.','Å ariÅ¡skÃ© MichaÄ¾any, Jarkova 17','+421/2 456 21 211','050'),
+       ('UNIPHARMA','Presov, Safarikova 2','+421 491 79 433','053');
+
+INSERT INTO pharmacy(adress, name, id_pharmacy)
+VALUES('Trebisov, Komenskeho 62','TILIA s.r.o.','24614'),
+       ('Michalovce, M.R.Stefanika 31','Dr.Max','24615'),
+       ('Presov, Slovenskej jednoty 2','Rodinna Lekaren','24612'),
+       ('Ruzomberok, Mlynska 6','Maraton','24616'),
+       ('Trebisov, Juzna 15','Mier','24605');
+
+
+INSERT INTO drug(name, expiration_date, quantity, active_compound, id_sukl, price, pid, id_pharmacy)
+VALUES('Zylit 28x75mg','02-29-2024',3.00,'zylit','80636',2.35,'9534','24614'),
+      ('ZYRTEC <50x10mg>','06-30-2025',5.00,'cetirizine','27002',2.48,'9152','24615'),
+      ('PARALEN 24tbl','01-01-2022',7.00,'cetirizin','30229',4.69,'9842','24615'),
+      ('PANZYTRAT <50x250mg>','12-31-2023',2.00,'panzytracin','92507',15.60,'9623','24605'),
+      ('PARACUT <10x500mg>','11-30-2024',1.00,'parachute','07721',11.79,'9842','24612'),
+	('ZODAC tbl 60x10mg','01-01-2022',2.33,'cetirizin','05496',5.72,'9534','24614');
+
+INSERT INTO make(ID_company, ID_sukl)
+VALUES (050,80636),
+       (052,27002),
+       (053,30229),
+       (054,92507),
+       (057,07721),
+       (052,05496);
+
+--Odovzdavka 3
+--1 pohľad s použitím množinových operácií
+--ukáže všetky pacientky a všetkých pacientov z Kosice
+create view patients_view as
+select p.Birth_number, p.Name, p.Gender, p.Adress
+from patient p
+where Gender in ('F') and Adress like '%Bratislava%'
+union
+select p.Birth_number, p.Name, p.Gender, p.Adress
+from patient p
+where Gender in ('M') and Adress like '%Kosice%';
+
+--2 pohľady s použitím vnorených poddopytov.
+--zobraziť všetkých pacientov, ktorí boli liečení 'Doc.Mgr.' a 'Doc.Ing.'
+create view patients_doc_mgr_ing_view as
+select p.Name, p.Birth_number
+from patient p
+where exists(
+    select *
+    from doctor d
+    where d.title in('Doc.Mgr.', 'Doc.Ing.') and p.id_doctor = d.ID_doctor
+          );
+
+--zobraziť Pharmacy, ktorí ma 2 alebo viac Drug
+create view PharmacyTop as
+select p.Name, p.adress
+from Pharmacy p
+where p.ID_pharmacy in(
+    select t.ID_pharmacy
+    from (
+        select p.ID_pharmacy, count(d.ID_pharmacy) as ccount
+        from Pharmacy p
+        join Drug D on p.ID_pharmacy = D.ID_pharmacy
+        group by p.ID_pharmacy
+        having count(p.ID_pharmacy)>=2
+        order by ccount desc
+         ) as t
+    );
+
+--skript na vytvorenie triggeru/triggerov, ktoré budú implementovať autoinkrementáciu umelých kľúčov
+--trigger pre tabuľky pobocka z autoinkrementácim POBOCKA_ID
+create or replace function autoid() returns trigger as
+$$
+    declare
+        newPharmacy int;
+    begin
+        select max(ID_pharmacy) into newPharmacy from Pharmacy;
+        if (newPharmacy) is null and new.ID_pharmacy is null then
+            new.ID_pharmacy = 1;
+        end if;
+        if new.ID_pharmacy is null then
+            new.ID_pharmacy = newPharmacy+1;
+        end if;
+        return new;
+    end;
+$$
+language plpgsql;
+
+create trigger autoidPharmacy before insert on Pharmacy
+    for each row
+    execute procedure autoid();
+
+INSERT INTO Pharmacy(adress, name) VALUES ('Košice Moldavská cesta 32','Dr.Max');
+
+--skript na aspoň dva zmysluplné triggre (okrem triggerov na autoinkrementáciu)
+--pridanie údajov do tabuľky 'Make' po pridaní do view 'drug_company_view'
+create view drug_company_view as
+select PC.Name as company_name, d.Name as Drug_name
+from Pharmaceutical_company PC
+left join Make M on PC.ID_company = M.ID_company
+left join Drug D on D.ID_sukl = M.ID_sukl;
+
+create or replace function add_drug_company() returns trigger as
+    $$
+    declare
+    new_ID_company int;
+    new_ID_sukl int;
+    begin
+        if(select count(ID_company) from pharmaceutical_company where Name = new.company_name) =0 then
+            raise exception 'neexistuje pharmaceutical_company';
+        end if;
+        if(select count(ID_sukl) from drug where Name = new.Drug_name) =0 then
+            raise exception 'neexistuje žiadny takýto drug';
+        end if;
+
+        select ID_company into new_ID_company from Pharmaceutical_company where Name = new.company_name;
+        select ID_sukl into new_ID_sukl from drug where Name = new.Drug_name;
+
+        insert into make(id_company, id_sukl)
+        VALUES (new_ID_company, new_ID_sukl);
+        return new;
+    end
+    $$
+language plpgsql;
+
+create trigger t_add_drug_company instead of insert on drug_company_view
+    for each row
+    execute procedure add_drug_company();
+
+insert into drug_company_view (company_name, Drug_name)
+values ('IMUNA PHARM, a.s.', 'PARALEN 24tbl');
+
+--aktualizuje všetky informácie o drug
+create view drug_pharmacy as
+select d.Name, d.Active_compound, d.Expiration_date, d.Price, d.Quantity, p.Adress
+from drug d
+left join pharmacy p on d.ID_pharmacy = p.id_pharmacy;
+
+create or replace function udp_drug_pharmacy() returns trigger as
+    $$
+    begin
+        if (new.Price<0) then
+            raise exception 'Price nemôže byť < 0';
+        elseif(new.Quantity<0) then
+            raise exception 'Quantity nemôže byť < 0';
+        elseif(new.Name) is null then
+            raise exception 'Name nemôže byť prázdny';
+        elseif(new.Active_compound) is null then
+            raise exception 'Active compound nemôže byť prázdny';
+        elseif(new.Expiration_date < current_date) then
+            raise exception 'Expiration_date nemôže byť menej ako current date';
+        elseif(new.Adress != old.Adress) then
+            raise exception 'Adress nie je môže zmenit';
+        end if;
+
+        update drug set name=new.Name,
+                           active_compound=new.active_compound,
+                           expiration_date=new.expiration_date,
+                           price = new.Price,
+                           quantity = new.Quantity
+        where name = old.Name;
+        return new;
+    end
+    $$
+language plpgsql;
+
+create trigger t_udp_drug_pharmacy instead of update on drug_pharmacy
+    for each row
+    execute procedure udp_drug_pharmacy();
+
+update drug_pharmacy set quantity = 4 where Name = 'Zylit 28x75mg';
+
+--skript na aspoň jednu storovanú procedúru a jednu funkciu
+--procedúra ktora zvýši alebo zníži Price všetkých drugs o určité percento
+create or replace procedure udp_priceDrug(procent int, direction varchar(10)) as
+$$
+    begin
+        if direction = 'increase' then
+            update drug set Price = round((Price + Price*procent/100)::numeric, 2);
+        elseif direction = 'decrease' then
+            update drug set Price = round((Price - Price*procent/100)::numeric,2);
+        end if;
+    end;
+$$
+language plpgsql;
+
+call udp_priceDrug(1, 'decrease');
+call udp_priceDrug(2, 'increase');
+
+--procedura pridá do tabuľky nového lekára
+create or replace procedure addDoctor(_name varchar(20), _speciality varchar(50), _title varchar(100)) as
+$$
+    declare
+        newID int;
+    begin
+        select max(ID_doctor)+1 into newID from doctor;
+
+        insert into doctor(name, speciality, id_doctor, title)
+        values (_name, _speciality,newID, _title);
+    end;
+$$
+language plpgsql;
+
+call addDoctor('Maros Don','Immunologists','Doc.Ing.');
+
+--zobraziť informácie o Drugs patienta
+create or replace function info_pacient(_Birth_number varchar(20)) returns
+table(
+    _avg numeric,
+    _count bigint
+     ) as
+$$
+begin
+    return query
+        select round(avg(d.Price)::numeric, 2), count(d.Quantity)
+        from patient p
+        join Drug D on p.PID = D.PID
+        where p.Birth_number = _Birth_number;
+end;
+$$
+language plpgsql;
+
+select info_pacient('100407/0012');

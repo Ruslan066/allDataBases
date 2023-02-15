@@ -1,0 +1,108 @@
+--odovzdavka 3
+
+--ukáže kaviarne zo všetkých miest okrem 'Prešov' a 'Košice'
+select cs.Name, cs.Address, cs.City
+from coffee_shop cs
+except
+select cs.Name, cs.Address, cs.City
+from coffee_shop cs
+where cs.city in('Prešov', 'Košice');
+
+--ukáže, ktoré nápoje si objednali ľudia z miest 'Prešov' a 'Košice'
+select ce.Type, ce.Description, ce.Price
+from coffee ce
+where exists(
+    select *
+    from customer c
+    join favourites f on c.Customer_ID = f.customer_id
+    where c.city in('Prešov', 'Košice') and ce.coffee_id = f.coffee_id
+    );
+
+--ukáže, kto kúpil najdrahšiu kávu
+select c.Name
+from customer c
+join favourites f on c.Customer_ID = f.customer_id
+where f.coffee_id in (
+    select t.Coffee_ID
+    from (
+        select c.Coffee_ID, max(c.Price)
+        from coffee c
+        group by c.Coffee_ID
+        order by max(c.Price) desc
+        limit 1
+         ) as t
+    );
+
+--trigger pre "coffee" z autoinkrementácim "Coffee_ID"
+create or replace function func_autoinc() returns trigger as
+$$
+    declare
+    max_id int;
+    begin
+        select max(Coffee_ID)+1 into max_id from coffee;
+        new.Coffee_ID = max_id;
+        return new;
+    end;
+    $$
+language plpgsql;
+
+create trigger autoInc before insert on coffee
+    for each row
+    execute procedure func_autoinc();
+
+INSERT INTO Coffee(Size, Type, Price, Description)
+VALUES('L','Latte',3,'Laaaaaatte :)');
+
+--trigger pre pridanie údajov do tabuľky "Orders"
+create view employee_Orders as
+select e.Work_ID, e.Name, o.Item, o.Price, o.Date
+from employee e
+join Orders O on e.Work_ID = O.Work_ID;
+
+create or replace function add_Orders ()returns trigger as
+$$
+    declare
+        maxid int;
+    begin
+        select max(Order_ID)+1 into maxid from orders;
+        INSERT INTO Orders(Item, Price, Order_ID, Date, Work_ID)
+        values (new.Item, new.Price,maxid, new.Date, new.Work_ID);
+        return new;
+    end;
+$$
+language plpgsql;
+
+create trigger t_add_Orders instead of insert on employee_orders
+    for each row
+    execute procedure add_Orders();
+
+insert into employee_orders(work_id, name, item, price, date)
+values (100, 'Nina Malegová', 'Guatemala SHB', 12, current_date);
+
+
+---trigger pre aktualizácia údajov v tabuľke "coffee"
+create view view_coffee as
+select c.Coffee_ID, c.Type, c.Price, c2.Name, c2.Customer_ID
+from coffee c
+join favourites f on c.Coffee_ID = f.coffee_id
+join customer c2 on f.Customer_ID = c2.customer_id;
+
+create or replace function udp_coffee ()returns trigger as
+$$
+    begin
+        if(new.Price <=0) then
+            raise exception 'Price nemože byt <=0';
+        end if;
+        update coffee set  type = new.Type,
+                           price = new.Price
+        where type= old.Type;
+        return new;
+    end;
+$$
+language plpgsql;
+
+create trigger t_udp_coffee instead of update on view_coffee
+    for each row
+    execute procedure udp_coffee();
+
+update coffee set price = 4 where Type = 'Cappuccino';

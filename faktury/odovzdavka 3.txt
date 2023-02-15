@@ -1,0 +1,193 @@
+--Odovzdavka 3
+--1 pohľad s použitím množinových operácií
+--zobraziť zákazníkov, ktorí si nekúpili 'Apple iPhone 12', 'Apple iPhone 13 Pro'
+create view zakaznik_not_buy as
+select z.MENO, coalesce(f.FAKTURA_ID::varchar, '---') as FAKTURA_ID
+from zakaznik z
+left join faktura f on z.ZAKAZNIK_ID = f.zakaznik_id
+except
+select z.MENO, coalesce(f.FAKTURA_ID::varchar, '---') as FAKTURA_ID
+from zakaznik z
+left join faktura f on z.ZAKAZNIK_ID = f.zakaznik_id
+left join produkt p on f.PRODUKT_ID = p.produkt_id
+where p.NAZOV in('Apple iPhone 12', 'Apple iPhone 13 Pro')
+order by FAKTURA_ID desc;
+--2 pohľady s použitím vnorených poddopytov.
+--zobraziť zamestnanec ukážte, kto urobil faktura viac ako 1000
+create view lepsi_zamestnanec as
+select concat(z.MENO, ' ', z.PRIEZVISKO) as name, z.RODNE_CISLO
+from zamestnanec z
+where exists(
+        select *
+        from faktura f
+        join objednavky o on f.FAKTURA_ID = o.faktura_id
+        join produkt p on f.PRODUKT_ID = p.produkt_id
+        where p.CENA > 1000 and z.ZAMESTNANEC_ID = f.ZAMESTNANEC_ID
+          );
+--zobraziť zakaznikov, ktorí uložili 2 alebo viac produktov
+create view zakaznik_top as
+select concat(z.MENO, ' ', z.PRIEZVISKO) as name
+from zakaznik z
+where z.ZAKAZNIK_ID in(
+    select t.ZAKAZNIK_ID
+    from (
+        select zp.ZAKAZNIK_ID, count(zp.produkt_id) as ccount
+        from zakaznik z
+        join zoznam_priani zp on z.ZAKAZNIK_ID = zp.zakaznik_id
+        join produkt p on zp.PRODUKT_ID = p.produkt_id
+        group by zp.ZAKAZNIK_ID
+        having count(zp.produkt_id)>=2
+        order by ccount desc
+         ) as t
+    );
+--skript na vytvorenie triggeru/triggerov, ktoré budú implementovať autoinkrementáciu umelých kľúčov
+--trigger pre tabuľky pobocka z autoinkrementácim POBOCKA_ID
+create or replace function func_autoinc() returns trigger as
+$$
+    declare
+        newPOBOCKA_ID int;
+    begin
+        select max(POBOCKA_ID) into newPOBOCKA_ID from pobocka;
+        --skontrolujme, či tabuľka ne ma zoznam
+        if (newPOBOCKA_ID) is null and new.POBOCKA_ID is null then
+            new.POBOCKA_ID = 1;
+        end if;
+        if new.POBOCKA_ID is null then
+            new.POBOCKA_ID = newPOBOCKA_ID+1;
+        end if;
+        return new;
+    end;
+$$
+language plpgsql;
+
+create trigger autoIncPobocka before insert on pobocka
+    for each row
+    execute procedure func_autoinc();
+
+INSERT INTO Pobocka(STAT,MESTO,ULICA,PSC) VALUES ('Slovensko','Košice','Moldavská cesta 32','04001');
+
+--skript na aspoň dva zmysluplné triggre (okrem triggerov na autoinkrementáciu)
+--pridanie údajov do tabuľky 'zoznam_priani' po pridaní do view 'zakaznik_priani_produkt
+create view zakaznik_priani_produkt as
+select z.ZAKAZNIK_ID ,z.MENO, z.PRIEZVISKO, p.NAZOV
+from zakaznik z
+left join zoznam_priani zp on z.ZAKAZNIK_ID = zp.zakaznik_id
+left join produkt p on zp.PRODUKT_ID = p.produkt_id;
+
+create or replace function add_zoznam_priani() returns trigger as
+    $$
+    declare
+    new_zoznam_id int;
+    new_produkt_id int;
+    begin
+        if(select count(PRODUKT_ID) from produkt where NAZOV = new.NAZOV) =0 then
+            raise exception 'neexistuje žiadny takýto produkt';
+        end if;
+        if(select count(ZAKAZNIK_ID) from zakaznik where ZAKAZNIK_ID = new.ZAKAZNIK_ID) =0 then
+            raise exception 'neexistuje žiadny takýto zakaznik';
+        end if;
+
+        select max(zoznam_id) into new_zoznam_id from zoznam_priani;
+        select PRODUKT_ID into new_produkt_id from produkt where NAZOV = new.NAZOV;
+        insert into zoznam_priani(zoznam_id, zakaznik_id, produkt_id)
+        VALUES (new_zoznam_id, new.ZAKAZNIK_ID, new_produkt_id);
+        return new;
+    end
+    $$
+language plpgsql;
+
+create trigger t_add_zoznam_priani instead of insert on zakaznik_priani_produkt
+    for each row
+    execute procedure add_zoznam_priani();
+
+insert into zakaznik_priani_produkt (ZAKAZNIK_ID, MENO, PRIEZVISKO, NAZOV)
+values ('235496124','Lucia','Dziewičová','Apple AirTag');
+
+--aktualizuje všetky informácie o produkte
+create view produkts as
+select p.NAZOV, p.CENA, p.HODNOTENIE, p.KÓD_PRODUKTU
+from produkt p
+order by p.CENA desc;
+
+create or replace function udp_produkts() returns trigger as
+    $$
+    begin
+        if (new.HODNOTENIE::int<0) then
+            raise exception 'HODNOTENIE nemôže byť < 0';
+        elseif(new.CENA<0) then
+            raise exception 'CENA nemôže byť < 0';
+        elseif(new.KÓD_PRODUKTU) is null then
+            raise exception 'KÓD_PRODUKTU nemôže byť prázdny';
+        elseif(new.NAZOV) is null then
+            raise exception 'NAZOV nemôže byť prázdny';
+        end if;
+
+        update produkt set nazov=new.NAZOV,
+                           cena=new.CENA,
+                           hodnotenie=new.HODNOTENIE,
+                           "kÓd_produktu" = new.KÓD_PRODUKTU
+        where KÓD_PRODUKTU = old.KÓD_PRODUKTU;
+        return new;
+    end
+    $$
+language plpgsql;
+
+create trigger t_udp_produkts instead of update on produkts
+    for each row
+    execute procedure udp_produkts();
+
+update produkts set hodnotenie = 11 where "kÓd_produktu"= 'MLV93';
+
+--skript na aspoň jednu storovanú procedúru a jednu funkciu
+--procedure pridávania fakturu
+create or replace procedure create_faktura(_pobocka_id BIGINT, _zamestnanec_id BIGINT, _TELEFONNE_CISLO BIGINT, nazov_tovar varchar(255)) as
+$$
+    declare
+        max_faktura_id BIGINT;
+        _produkt_id BIGINT;
+        _zakaznik_id BIGINT;
+    begin
+         if (select count(*) from zakaznik where TELEFONNE_CISLO = _TELEFONNE_CISLO) = 0 then
+            raise exception 'ZAKAZNIK neexistuje';
+        elseif(select count(*) from produkt where NAZOV = nazov_tovar) =0  then
+            raise exception 'PRODUKT neexistuje';
+        elseif(select count(*) from pobocka where POBOCKA_ID = _pobocka_id) =0  then
+            raise exception 'POBOCKA neexistuje';
+        elseif(select count(*) from zamestnanec where ZAMESTNANEC_ID = _zamestnanec_id) =0  then
+            raise exception 'ZAMESTNANEC neexistuje';
+        end if ;
+
+        select max(faktura_id)+1 into max_faktura_id from faktura;
+        select PRODUKT_ID into _produkt_id from produkt where NAZOV = nazov_tovar;
+        select ZAKAZNIK_ID into _zakaznik_id from zakaznik where TELEFONNE_CISLO = _TELEFONNE_CISLO;
+
+        insert into faktura(faktura_id, cas_vytvorenia, pobocka_id, zakaznik_id, zamestnanec_id, produkt_id)
+        values(max_faktura_id, current_timestamp, _pobocka_id, _zakaznik_id, _zamestnanec_id, _produkt_id);
+    end;
+$$
+language plpgsql;
+
+call create_faktura(1, 123, 907702689, 'Apple AirTag');
+
+--zobraziť všetky informácie o cene produktov za mesiac
+drop function info_produkt(_year int, _month int);
+create or replace function info_produkt(_year int, _month int) returns
+table(
+    _min float,
+    _max float,
+    _avg numeric,
+    _sum float,
+    _count bigint
+     ) as
+$$
+begin
+    return query
+        select min(p.CENA), max(p.CENA), round(avg(p.CENA)::numeric, 2), sum(p.CENA), count(p.CENA)
+        from produkt p
+        join faktura f on p.PRODUKT_ID = f.produkt_id
+        where extract(month from f.CAS_VYTVORENIA) = _month and extract(year from f.CAS_VYTVORENIA) = _year;
+end;
+$$
+language plpgsql;
+
+select info_produkt(2022, 3)

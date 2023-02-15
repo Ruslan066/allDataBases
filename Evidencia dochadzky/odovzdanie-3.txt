@@ -1,0 +1,190 @@
+---------------Finálne odovzdávanie zadania---------------
+----1 pohľad s použitím množinových operácií
+--zobraziť zamestnancov oddelenia 'Directorate' ktorí majú plat viac ako 4000
+--a oddelenia 'IT Department', 'Accounting','Personnel Department' ktorí majú plat viac=  ako 2000
+create view employeesDepPost as
+select e.lastname ||' '|| e.firstname as employee_, d.name_department||' '|| p.name_post as department_post, p.salary as salary_
+from employee e
+join department d on d.id_department = e.id_department_fk
+join posts p on p.id_posts = e.id_posts_fk
+where name_department in('Directorate') and salary >4000
+union
+select e.lastname ||' '|| e.firstname as employee_, d.name_department||' '|| p.name_post as department_post, p.salary as salary_
+from employee e
+join department d on d.id_department = e.id_department_fk
+join posts p on p.id_posts = e.id_posts_fk
+where name_department in('IT Department', 'Accounting','Personnel Department') and salary >=2000
+order by salary_ desc;
+--zobraziť zamestnancov, ktorí boli na pracovisku 01 a 02
+create view employeesWork as
+select e.id_employee, concat(e.lastname, ' ', e.firstname) as name
+from employee e
+join session_log sl on e.id_employee = sl.id_employee_fk
+where sl.date_session = '2022-04-01'
+INTERSECT
+select e.id_employee, concat(e.lastname, ' ', e.firstname) as name
+from employee e
+join session_log sl on e.id_employee = sl.id_employee_fk
+where sl.date_session = '2022-04-02';
+----2 pohľady s použitím vnorených poddopytov.
+--zobraziť zamestnancom, ktorí boli najčastejšie na stretnutiach s '2022-04-03' - '2022-04-05'
+create view topEmployeeMeeting as
+select e.firstname || ' '||e.lastname as name, e.phone, e.birthday, e.email
+from employee e
+where id_employee in (
+    select top.id_e
+    from (
+         select id_employee_fk as id_e, count(id_employee_fk) as ccoutn
+         from employee_meeting
+         join meeting m on m.id_meeting = employee_meeting.id_meeting_fk
+         where date_meeting between '2022-04-03' and '2022-04-05'
+         group by id_employee_fk
+         order by ccoutn desc
+         limit 3
+     ) as top
+);
+--zobraziť zamestnancom, ktorí nikdy ne meškali na prácu
+create view employeeNieMeskal as
+select e.firstname || ' '||e.lastname as name, e.phone, e.birthday, e.email
+from employee e
+where not exists(
+    select *
+    from session_log sl
+    where sl.note like '%Meškal%' and e.id_employee = sl.id_employee_fk
+    )
+order by name;
+----skript na vytvorenie triggeru/triggerov, ktoré budú implementovať autoinkrementáciu umelých kľúčov
+--trigger pre tabuľky department z autoinkrementácim id_department
+drop trigger autoIncDepartment on department;
+create trigger autoIncDepartment before insert on department
+    for each row
+    execute procedure func_autoinc();
+
+create or replace function func_autoinc() returns trigger as
+$$
+    declare
+        max_id_department int;
+    begin
+        select max(id_department) into max_id_department from department;
+
+        --skontrolujme, či je tabuľka prázdna
+        if (max_id_department) is null and new.id_department is null then
+            new.id_department = 1;
+        end if;
+        --skontrolujme, či 'new.id_department' prázdny
+        if new.id_department is null then
+            new.id_department = (max_id_department)+1;
+        end if;
+        --skontrolujme, či 'new.id_department' uz je v tabulke
+        if( select id_department from department
+        where new.id_department  in(id_department)) is not null then
+            new.id_department = (max_id_department)+1;
+        end if;
+        return new;
+    end;
+$$
+language plpgsql;
+
+insert into department(id_department, name_department)
+values (1,'test');
+
+insert into department(name_department)
+values ('test2');
+
+----skript na aspoň dva zmysluplné triggre (okrem triggerov na autoinkrementáciu)
+--trigger pre view employee_meeting_view ktorý pridá nový riadok do tabuľky employee_meeting
+drop view employee_meeting_view;
+create view employee_meeting_view as
+select concat(e.firstname, ' ', e.lastname) as employee_name, e.email, m.date_meeting, m.name_meeting
+from employee e
+left join employee_meeting em on e.id_employee = em.id_employee_fk
+left join meeting m on m.id_meeting = em.id_meeting_fk
+order by m.date_meeting;
+
+create or replace function add_emp_meet_func() returns trigger as
+$$
+    declare
+        id_e int;
+        id_m int;
+    begin
+        select id_employee into id_e from employee where email = new.email;
+        select id_meeting into id_m from meeting where date_meeting = new.date_meeting
+                                                   and name_meeting= new.name_meeting;
+        insert into employee_meeting (id_employee_fk,id_meeting_fk)
+        values (id_e,id_m);
+        return new;
+    end;
+$$
+language plpgsql;
+create trigger add_emp_meet instead of insert on employee_meeting_view
+    for each row
+    execute procedure add_emp_meet_func();
+insert into employee_meeting_view(employee_name, email, date_meeting, name_meeting)
+values ('Maximilián Samson', 'Maximilián@mail.com', '2022-04-04', 'Informal meeting');
+
+--trigger pre view employee_session_view ktorý bude aktualizovať riadok tabuľky session_log
+create view employee_session_view as
+select concat(e.firstname, ' ', e.lastname) as employee_name, e.email, sl.date_session, sl.arrival_time, sl.note
+from employee e
+full join session_log sl on e.id_employee = sl.id_employee_fk;
+
+create or replace function udp_employee_session_func() returns trigger as
+$$
+    declare
+        id_e int;
+    begin
+        select id_employee into id_e from employee where email = new.email;
+        update session_log set date_session = new.date_session,
+                               arrival_time = new.arrival_time,
+                               note = new.note
+        where id_employee_fk = id_e and date_session = old.date_session;
+        return new;
+    end;
+$$
+language plpgsql;
+create trigger udp_employee_session instead of update on employee_session_view
+    for each row
+    execute procedure udp_employee_session_func();
+
+update employee_session_view set note = 'Meškal 1 minútu'
+where email = 'Maximilián@mail.com' and date_session = '2022-04-01';
+
+----skript na aspoň jednu storovanú procedúru a jednu funkciu
+---1---
+--procedúra ktora zvýši alebo zníži platy všetkých zamestnancov o určité percento
+create or replace procedure udp_salary(procent int, direction varchar(10)) as
+$$
+    begin
+        if direction = 'increase' then
+            update posts set salary = salary + salary*procent/100;
+        elseif direction = 'decrease' then
+            update posts set salary = salary - salary*procent/100;
+        end if;
+    end;
+$$
+language plpgsql;
+
+call udp_salary(1, 'decrease');
+call udp_salary(2, 'increase');
+--funkcia, ktorá vráti tabuľku s oddeleniami a pozíciami, ktoré pracovali v určitý deň
+create or replace function get_post(_date_session date)
+returns table(
+                department varchar,
+                post varchar
+             ) as
+$$
+    begin
+        return query select
+        d.name_department, p.name_post
+        from
+        session_log sl
+        join employee e on e.id_employee = sl.id_employee_fk
+        join department d on d.id_department = e.id_department_fk
+        join posts p on p.id_posts = e.id_posts_fk
+        where sl.date_session = _date_session
+        order by d.name_department;
+    end;
+$$
+language plpgsql;
+
+select get_post('2022-04-01');

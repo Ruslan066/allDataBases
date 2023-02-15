@@ -1,0 +1,367 @@
+create table city
+(
+    id_city     int not null unique primary key,
+    name_city   varchar(50) not null
+);
+
+create table cinema
+(
+    id_cinema     int not null unique primary key,
+    name_cinema   varchar(100) not null,
+    address       varchar(100) not null,
+    description   varchar(255) not null,
+    id_city_fk    int not null,
+    foreign key (id_city_fk) references city(id_city)
+);
+
+create table halls
+(
+    id_halls     int not null unique primary key,
+    name_halls   varchar(50) not null,
+    capacity     int not null,
+    id_cinema_fk    int not null,
+    foreign key (id_cinema_fk) references cinema(id_cinema)
+);
+
+create table film
+(
+    id_film         int not null unique primary key,
+    name_film       varchar(100) not null,
+    language        varchar(50) not null,
+    description     varchar(255) not null,
+    year_film       int not null,
+    country         varchar(100) not null,
+    age_category    int not null
+);
+
+create table genre
+(
+    id_genre        int not null unique primary key,
+    name_genre      varchar(50) unique not null
+);
+
+create table genre_film
+(
+    id_genre_fk    int not null,
+    foreign key (id_genre_fk) references genre(id_genre),
+
+    id_film_fk    int not null,
+    foreign key (id_film_fk) references film(id_film)
+);
+
+create table session
+(
+    id_session              int not null unique primary key,
+    time_start_session      time not null,
+    time_end_session      time not null,
+    date_session      date not null,
+
+    id_film_fk int not null,
+    foreign key (id_film_fk) references film(id_film)
+);
+
+create table halls_session
+(
+    id_session_fk   int not null,
+    foreign key (id_session_fk) references session(id_session),
+
+    id_halls_fk     int not null,
+    foreign key (id_halls_fk) references halls(id_halls)
+);
+
+
+create table ticket
+(
+    id_ticket           int not null unique primary key,    -- 1
+    cost_ticket         float not null,                     -- 5.50
+    type_ticket         varchar(20) not null                --'vip ticket'
+);
+
+create table session_ticket
+(
+    id_session_fk   int not null,
+    foreign key (id_session_fk) references session(id_session),
+
+    id_ticket_fk     int not null,
+    foreign key (id_ticket_fk) references ticket(id_ticket),
+
+    number_tickets int not null
+);
+
+insert into genre (id_genre, name_genre)
+values (1, 'Actions'),
+       (2, 'Adventure'),
+       (3, 'Animated'),
+       (4, 'Comedy'),
+       (5, 'Drama'),
+       (6, 'Fantasy'),
+       (7, 'Horror');
+
+insert into city (id_city, name_city)
+values (1, 'Bratislava'),
+       (2, 'Košice'),
+       (3, 'Poprad'),
+       (4, 'Michalovce'),
+       (5, 'Banská Bystrica'),
+       (6, 'Nitra'),
+       (7, 'Trnava');
+
+insert into cinema (id_cinema, name_cinema, address, description, id_city_fk)
+values (1, 'CINEMAX 2', 'Moldavská cesta 32', 'Naša sieť kín CINEMAX vznikla v roku 2006', 2),
+       (2, '5D', 'Moldavská cesta 32', 'Najlepse kino v meste', 2),
+       (3, 'Poprad Cinema', 'Poštová 2', 'kino v obchodnom centre MAX', 3),
+       (4, 'Michalovce', 'Komenskeho 56', 'Velmi drahe kino', 4),
+       (5, 'Multiplex', 'Jesenského 4', 'Nice fine kino', 1);
+
+insert into halls(id_halls, name_halls, capacity, id_cinema_fk)
+values (1, 'hall 1', 150, 1),
+       (2, 'hall 2', 100, 1),
+       (3, 'hall 3', 90, 1),
+       (4, 'hall water effect', 20, 2),
+       (5, 'hall wind effect', 20, 2),
+       (6, 'hall 1', 200, 3),
+       (7, 'hall 2', 250, 3),
+       (8, 'hall 3', 150, 3),
+       (9, 'hall 4', 150, 3),
+       (10, 'hall modern', 150, 4),
+       (11, 'hall private', 250, 4),
+       (12, 'hall velky', 300, 5),
+       (13, 'hall luxury', 200, 5);
+
+insert into film(id_film, name_film, language, description, year_film, country, age_category)
+values (1,'The Dark Knight', 'En', 'When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.', 2008, 'United States', 14),
+       (2,'The Lord of the Rings: The Return of the King', 'En, Sk', 'Gandalf and Aragorn lead the World of Men against Sauron''s army to draw his gaze from Frodo and Sam as they approach Mount Doom with the One Ring.', 2003, 'New Zealand, United States', 12),
+       (3,'The Godfather', 'En, Sk', 'The aging patriarch of an organized crime dynasty in postwar New York City transfers control of his clandestine empire to his reluctant youngest son.', 1972, 'United States', 16),
+       (4,'Inception', 'En, Sk', 'A thief who steals corporate secrets through the use of dream-sharing technology.', 2010, 'United States, Great Britain', 12),
+       (5,'The Matrix', 'En, Sk', 'When a beautiful stranger leads computer hacker Neo to a forbidding underworld', 1999, 'United States, Australia', 16),
+       (6,'The Green Mile', 'En', 'The lives of guards on Death Row are affected by one of their charges', 1999, 'United States', 14),
+       (7,'Star Wars', 'En, Sk', 'Luke Skywalker joins forces with a Jedi Knight, a cocky pilot', 1977, 'United States', 0),
+       (8,'Lucy', 'En', 'A woman, accidentally caught in a dark deal, turns the tables on her captors and transforms into a merciless warrior evolved beyond human logic.', 2014, 'United States', 18),
+       (9,'Interstellar', 'En, Sk', 'A team of explorers travel through a wormhole in space in an attempt to ensure humanity''s survival.', 2014, 'United States, Great Britain', 12),
+       (10,'Home Invasion', 'En', 'Intruders shoot Chloe''s friend and break into Chloe''s home on an isolated island on a rainy night.', 2016, 'United States', 13);
+
+insert into genre_film( id_film_fk, id_genre_fk)
+values (1,1),
+       (1,2),
+       (2,6),
+       (2,3),
+       (3,5),
+       (4,1),
+       (4,6),
+       (5,1),
+       (5,6),
+       (6,5),
+       (7,1),
+       (7,2),
+       (7,6),
+       (8,1),
+       (8,5),
+       (9,6),
+       (9,2),
+       (10,2),
+       (10,7);
+
+insert into ticket(id_ticket, cost_ticket, type_ticket)
+values (1, 2, 'normal'),
+       (2, 4.5, 'vip'),
+       (3, 8, 'luxury');
+
+
+insert into session(id_session, time_start_session, time_end_session, id_film_fk, date_session)
+values (1, '09:30:00', '11:30:00', 1, '2020-04-05'),
+       (2, '09:30:00', '11:30:00', 2, '2020-04-05'),
+       (3, '19:00:00', '21:30:00', 3, '2020-04-05'),
+       (4, '18:30:00', '20:30:00', 4, '2020-04-05'),
+       (5, '09:30:00', '11:30:00', 5, '2020-04-06'),
+       (6, '11:30:00', '13:30:00', 6, '2020-04-06'),
+       (7, '17:30:00', '19:30:00', 1, '2020-04-06'),
+       (8, '10:00:00', '11:50:00', 10, '2020-04-07'),
+       (9, '15:20:00', '17:30:00', 4, '2020-04-07'),
+       (10, '10:00:00', '11:50:00', 6, '2020-04-08');
+
+insert into session_ticket(id_session_fk, id_ticket_fk, number_tickets)
+values (1, 1, 100),
+       (1, 2, 20),
+       (2, 1, 100),
+       (2, 3, 5),
+       (3, 1, 200),
+       (4, 2, 100),
+       (5, 1, 150),
+       (5, 2, 15),
+       (5, 3, 15),
+       (6, 1, 150),
+       (7, 1, 100),
+       (7, 2, 10),
+       (8, 1, 130),
+       (9, 1, 100),
+       (10, 2, 20);
+
+insert into halls_session(id_session_fk, id_halls_fk)
+values (1,1),
+       (1,2),
+       (2,6),
+       (3,8),
+       (4,12),
+       (5,6),
+       (6,7),
+       (7,8),
+       (8,9),
+       (9,10),
+       (4,11),
+       (7,12),
+       (9,13),
+       (10,5);
+
+--ODOVZDAVKA 2
+--2 pohľady s netriviálnym selektom nad jednou tabuľkou
+select f.name_film, f.description, concat(f.country, ' - ', f.language) as country_lan, f.age_category
+from film f
+where f.country like '%United States%'
+order by age_category asc;
+
+select h.capacity, string_agg(h.name_halls, ', ') as halls
+from halls h
+group by h.capacity
+order by h.capacity desc;
+
+-- 3 pohľady so spájaním tabuliek (1x spojenie 3 tabuliek, 1x outer join, 1x spojenie aspoň 2 tabuliek);
+select f.name_film, f.country, g.name_genre
+from genre g
+inner join genre_film gf on g.id_genre = gf.id_genre_fk
+inner join film f on f.id_film = gf.id_film_fk
+where g.name_genre = 'Actions'
+order by f.name_film asc;
+
+select c.name_city, coalesce(c2.name_cinema, '---')
+from city c
+left outer join cinema c2 on c.id_city = c2.id_city_fk;
+
+select c.name_cinema, concat(h.name_halls, ' - ', h.capacity ) as halls_capacity,
+       concat(s.time_start_session, ' - ', s.time_end_session) as time_session,
+       f.name_film
+from cinema c
+left outer join halls h on c.id_cinema = h.id_cinema_fk
+left outer join halls_session hs on h.id_halls = hs.id_halls_fk
+left outer join session s on s.id_session = hs.id_session_fk
+left outer join film f on f.id_film = s.id_film_fk
+where name_cinema = 'Michalovce' and s.date_session
+    between '2020-04-05' and '2020-04-07';
+
+--2 pohľady s použitím agregačných funkcií alebo zoskupenia
+select c.name_cinema, sum(h.capacity)
+from cinema c
+inner join halls h on c.id_cinema = h.id_cinema_fk
+where c.name_cinema = 'CINEMAX 2'
+group by c.name_cinema;
+
+select f.name_film
+from cinema
+join halls h on cinema.id_cinema = h.id_cinema_fk
+join halls_session hs on h.id_halls = hs.id_halls_fk
+join session s on s.id_session = hs.id_session_fk
+join film f on f.id_film = s.id_film_fk
+where cinema.name_cinema = '5D';
+
+select round( avg(t.cost_ticket)::numeric, 2) || ' €' as avg_cost
+from ticket t
+left join session_ticket st on t.id_ticket = st.id_ticket_fk
+left join session s on s.id_session = st.id_session_fk
+where s.date_session = '2020-04-05';
+
+-- 1 pohľad s použitím množinových operácií
+select f.name_film, f.age_category, string_agg(g.name_genre, ', ')
+from film f
+join genre_film gf on f.id_film = gf.id_film_fk
+join genre g on g.id_genre = gf.id_genre_fk
+where f.age_category <14 and g.name_genre = 'Animated'
+group by f.age_category, f.name_film
+union
+select f.name_film, f.age_category, string_agg(g.name_genre, ', ')
+from film f
+join genre_film gf on f.id_film = gf.id_film_fk
+join genre g on g.id_genre = gf.id_genre_fk
+where f.age_category >=14
+group by f.age_category, f.name_film
+order by age_category asc ;
+
+--2 pohľady s použitím vnorených selektov;
+
+select c.name_cinema
+from cinema c
+-- kontrolujem id_cinema z vnutorneho selektu
+where id_cinema in (
+        --vyberem len id_cinema z vnutorneho selektu
+        select t.id_cinema_fk
+        from (
+            --vypise id_cinema vsetkych halls, ktory je v tejto cinema a sucet session v tejto cinema
+            select h.id_cinema_fk, string_agg(h.name_halls, ', '), count(hs.id_session_fk) as countt
+            from halls h
+            join halls_session hs on h.id_halls = hs.id_halls_fk
+            --zoskupujem podla cinema
+            group by h.id_cinema_fk
+            --zoradujem sucet session od najväcsieho po najmensi
+            order by countt desc
+            ) as t
+                   );
+
+select concat(s.time_start_session, ' - ', s.time_end_session) as time_session, f.name_film
+from session s
+join film f on f.id_film = s.id_film_fk
+where exists(
+    select *
+    from ticket t
+    join session_ticket st on t.id_ticket = st.id_ticket_fk
+    where t.type_ticket ='luxury' and s.id_session = st.id_session_fk
+          );
+
+--vytvorte 1 sekvenciu na generovanie primárnych kľúčov a triggre, ktorá bude vkladať hodnoty do príslušných tabuliek;
+
+insert into genre (id_genre, name_genre)
+values (8, 'Actions');
+
+insert into genre (name_genre)
+values ('robot'),
+       ('animal');
+
+create trigger generateKey before insert on genre
+    for each row
+    execute procedure func_generateKey();
+
+create or replace function func_generateKey() returns trigger as
+$$
+    declare
+        max_id int;
+    begin
+        select max(id_genre) into max_id
+        from genre;
+
+        max_id = max_id +1;
+        new.id_genre = max_id;
+
+        return new;
+    end;
+$$
+language plpgsql;
+
+--vytvorte 1 ľubovoľný trigger okrem typu triggra uvedeného vyššie
+drop trigger udpCost on ticket;
+create trigger udpCost after update on ticket
+    for each row
+    execute procedure func_udpCost();
+
+create or replace function func_udpCost() returns trigger as
+    $$
+    begin
+        if(new.cost_ticket)<1 then
+            raise exception 'cena ticketu musi byt väcsia alebo = ako 1 €';
+        end if;
+         if(new.cost_ticket)>15 then
+            raise exception 'cena ticketu musi byt mensia alebo = ako 15 €';
+        end if;
+        update ticket set cost_ticket = new.cost_ticket where cost_ticket = old.cost_ticket;
+        return new;
+    end;
+    $$
+language plpgsql;
+
+update ticket set cost_ticket = 16.9 where type_ticket = 'normal';

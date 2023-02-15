@@ -1,0 +1,178 @@
+/*DATABAZOVE SYSTEMY - FAKTURY */
+DROP TABLE IF EXISTS Produkt,Pobocka,Zakaznik,Zamestnanec,Zoznam_priani,Faktura,Objednavky;
+DROP VIEW IF EXISTS MladiciZamestnanci,Slovaci,CelkovaCena1,Wishlist,FakturaZakaznika,NajstarsiZamestnanec;
+
+/*TABULKA PRODUKTOV*/
+CREATE TABLE Produkt(
+
+	NAZOV varchar(255)			UNIQUE 		NOT NULL,
+	CENA FLOAT 					NOT NULL,
+	POPIS varchar(255),
+	HODNOTENIE varchar(255),
+	KÓD_PRODUKTU varchar(10),
+	PRODUKT_ID INT 				PRIMARY KEY
+);
+
+/*INSERT PRODUKTOV*/
+INSERT INTO Produkt(NAZOV, CENA, POPIS, HODNOTENIE, KÓD_PRODUKTU,PRODUKT_ID) VALUES('Apple iPhone 13 Pro','1149', 'iPhone 13 Pro. Vôbec najvyspelejší upgrade profesionálnej fotosústavy. Super Retina XDR displej s ProMotion pre rýchlejšiu a bezprostrednejšiu odozvu.',' ','MLV93',1);
+INSERT INTO Produkt(NAZOV, CENA, POPIS, HODNOTENIE, KÓD_PRODUKTU,PRODUKT_ID) VALUES('Apple iPhone 13 mini','739','iPhone 13 mini. Vôbec najvyspelejšia dvojitá fotosústava v iPhone. ' ||
+                                                        'Závratne rýchly čip A15 Bionic. Skok vo výdrži batérie. Odolná konštrukcia.','','MLK03',2);
+INSERT INTO Produkt(NAZOV, CENA, POPIS, HODNOTENIE, KÓD_PRODUKTU,PRODUKT_ID) VALUES('Apple iPad Pro','879', 'iPad Pro má čip Apple M1 pre ďalší výkonu a celodennú výdrž batérie. Liquid Retina ' ||
+                                                   'displej iPadu Pro je nie len nádherný, ale tiež dokonalo presnosný.','','MHQR3',3);
+INSERT INTO Produkt(NAZOV, CENA, POPIS, HODNOTENIE, KÓD_PRODUKTU,PRODUKT_ID) VALUES('Apple iPad Air','679','iPad Air má nádherný, 10,9-palcový Liquid Retina displej. Čip Apple M1, ktorý ' ||
+                                                  'nešetrí rýchlosťou a robí z iPadu Air silný stroj na tvorivú prácu aj mobilné hry.','','MM9C3',4);
+INSERT INTO Produkt(NAZOV, CENA, POPIS, HODNOTENIE, KÓD_PRODUKTU,PRODUKT_ID) VALUES('Apple AirPods Pro', '229', 'Aktívne potlačovanie hluku pre počúvanie, ktoré ťa pohltí. Režim priepustnosti, ' ||
+                                                       'v ktorom počuješ a vnímaš svet okolo','','MLWK3',5);
+INSERT INTO Produkt(NAZOV, CENA, POPIS, HODNOTENIE, KÓD_PRODUKTU,PRODUKT_ID) VALUES('Apple AirPods Max', '499', 'Toto sú slúchadlá cez uši, aké tu ešte neboli. Dokonalé skĺbenie pôsobivého hi-fi zvuku ' ||
+                                                       'a čarovných vlastností AirPodu pre vrcholný zážitok z počúvania. Dizajnová symfónia.','','MGYN3',6);
+INSERT INTO Produkt(NAZOV, CENA, POPIS, HODNOTENIE, KÓD_PRODUKTU,PRODUKT_ID) VALUES('Apple AirTag','34', 'AirTag. Sleduj svoje kľúče, peňaženku, kufor, batoh a ďalšie veci v aplikácii Nájsť. Pokiaľ je hľadaný ' ||
+                                                'AirTag niekde blízko, môžeš ho cez integrovaný reproduktor prezvoniť.','','MX532',7);
+INSERT INTO Produkt(NAZOV, CENA, POPIS, HODNOTENIE, KÓD_PRODUKTU,PRODUKT_ID) VALUES('Apple iPhone 12','699','iPhone 12. 5G na superrýchle sťahovanie filmov a streamovanie videa vo vysokej kvalite. ' ||
+                                                   'Jasnejší 6,1-palcový Super Retina XDR displej.','','MGJE3',8);
+
+/*TABULKA POBOCIEK*/
+CREATE TABLE Pobocka(
+
+	POBOCKA_ID INT			    PRIMARY KEY,
+	STAT varchar(50)			NOT NULL,
+	MESTO varchar(70)          NOT NULL,
+	ULICA varchar(100)           NOT NULL,
+	PSC varchar(10)             NOT NULL
+
+);
+
+/*INSERT PRACOVISK*/
+INSERT INTO Pobocka(POBOCKA_ID,STAT,MESTO,ULICA,PSC) VALUES (1,'Slovensko','Košice','Námestie Osloboditeľov','04001');
+INSERT INTO Pobocka(POBOCKA_ID,STAT,MESTO,ULICA,PSC) VALUES (2,'Slovensko','Bratislava','Mlynské Nivy 3','82109');
+INSERT INTO Pobocka(POBOCKA_ID,STAT,MESTO,ULICA,PSC) VALUES (3,'Slovensko','Bratislava','Ivanská cesta 16','82104');
+INSERT INTO Pobocka(POBOCKA_ID,STAT,MESTO,ULICA,PSC) VALUES (4,'Česká republika','Praha','Českomoravská 2420','11121');
+INSERT INTO Pobocka(POBOCKA_ID,STAT,MESTO,ULICA,PSC) VALUES (5,'Česká republika','Praha','Vinohradská 151', '11254');
+INSERT INTO Pobocka(POBOCKA_ID,STAT,MESTO,ULICA,PSC) VALUES (6,'Česká republika','Ostrava','Jantarová 3344/4','73551');
+
+/*TABULKA ZAMESTNANCOV*/
+CREATE TABLE Zamestnanec(
+
+    ZAMESTNANEC_ID INT 			    PRIMARY KEY,
+	MENO varchar(255) 			    NOT NULL,
+	PRIEZVISKO varchar(255)         NOT NULL,
+	STAT varchar(70)                NOT NULL,
+	ADRESA varchar(255) 		    NOT NULL,
+	TELEFONNE_CISLO varchar(20)     NOT NULL,
+	RODNE_CISLO NUMERIC(10,0) 	    NOT NULL 		UNIQUE,
+	POBOCKA_ID INT  			    NOT NULL ,
+	CONSTRAINT FK_POBOCKA_ID FOREIGN KEY (POBOCKA_ID) REFERENCES Pobocka(POBOCKA_ID)
+);
+
+/*INSERT ZAMESTNANCOV*/
+INSERT INTO Zamestnanec(ZAMESTNANEC_ID, MENO, PRIEZVISKO, STAT, ADRESA, TELEFONNE_CISLO, RODNE_CISLO, POBOCKA_ID) VALUES ('0123','Michal',' Harhovský', 'Slovensko','Popradská 68, Poprad 05801','0905487496','0153045894','1');
+INSERT INTO Zamestnanec(ZAMESTNANEC_ID, MENO, PRIEZVISKO, STAT, ADRESA, TELEFONNE_CISLO, RODNE_CISLO, POBOCKA_ID) VALUES ('0124','Lukáš',' Pisarčík', 'Slovensko','Jefremovská 613/2, Liptovský Mikuláš 03101','9802046397','8942361548','1');
+INSERT INTO Zamestnanec(ZAMESTNANEC_ID, MENO, PRIEZVISKO, STAT, ADRESA, TELEFONNE_CISLO, RODNE_CISLO, POBOCKA_ID) VALUES ('0454','Ivan',' Dziewic', 'Česko','Letná 52, Praha 11542', '+420 775 882 265','9514085619','4');
+INSERT INTO Zamestnanec(ZAMESTNANEC_ID, MENO, PRIEZVISKO, STAT, ADRESA, TELEFONNE_CISLO, RODNE_CISLO, POBOCKA_ID) VALUES ('0455','Adam', 'Pentuch', 'Česko','Smolenská 10, Praha 12542', '+420 748 124 945','0014082531','4');
+INSERT INTO Zamestnanec(ZAMESTNANEC_ID, MENO, PRIEZVISKO, STAT, ADRESA, TELEFONNE_CISLO, RODNE_CISLO, POBOCKA_ID) VALUES ('0612','Mária',' Šterbáková','Slovensko','Ľubica 248, Kežmarok 03901', '0948266712', '7153084534','6');
+INSERT INTO Zamestnanec(ZAMESTNANEC_ID, MENO, PRIEZVISKO, STAT, ADRESA, TELEFONNE_CISLO, RODNE_CISLO, POBOCKA_ID) VALUES ('0613','Simona',' Rumančíková','Slovensko','Smižany 245/4, Smižany 45017', '0908234381', '9014085619','6');
+
+
+/*TABULKA ZAKAZNIKOV*/
+CREATE TABLE Zakaznik(
+
+	MENO varchar(255) 			        NOT NULL,
+	PRIEZVISKO varchar(255)             NOT NULL,
+	TELEFONNE_CISLO FLOAT,
+	EMAIL varchar(255),
+	ADRESA_DORUCENIA varchar(255) 		NOT NULL,
+	KRAJINA varchar(255)                NOT NULL,
+	FAKTURACNA_ADRESA varchar(255),
+	ZAKAZNIK_ID NUMERIC(10,0) 			PRIMARY KEY
+
+);
+
+/*INSERT ZAKAZNIKOV*/
+INSERT INTO Zakaznik(MENO, PRIEZVISKO, TELEFONNE_CISLO, EMAIL, ADRESA_DORUCENIA, KRAJINA, FAKTURACNA_ADRESA, ZAKAZNIK_ID) VALUES ('Jaroslav','Kotrba','0906164057','jaro.kotrba@gmail.com','Kemi 1642/1, Liptovský Mikuláš 03104','Slovensko','','9161426418');
+INSERT INTO Zakaznik(MENO, PRIEZVISKO, TELEFONNE_CISLO, EMAIL, ADRESA_DORUCENIA, KRAJINA, FAKTURACNA_ADRESA, ZAKAZNIK_ID) VALUES ('Šimon','Hadač','0907702689','simon.hadac7@gmail.com','Štiavnická 2365/5, Ružomberok 03526', 'Slovensko','','9807254633');
+INSERT INTO Zakaznik(MENO, PRIEZVISKO, TELEFONNE_CISLO, EMAIL, ADRESA_DORUCENIA, KRAJINA, FAKTURACNA_ADRESA, ZAKAZNIK_ID) VALUES ('Viera','Salajová','+420770242511','salajka@gmsil.com','Jahodová 1254/68, Brno 22104', 'Česko','','3665489120');
+INSERT INTO Zakaznik(MENO, PRIEZVISKO, TELEFONNE_CISLO, EMAIL, ADRESA_DORUCENIA, KRAJINA, FAKTURACNA_ADRESA, ZAKAZNIK_ID) VALUES ('Miroslav','Baluch','0918642971','baluch.miro@yahoo.sk','Hviezdoslavova 246/71, Bratislava 50148', 'Slovensko','','6610016169');
+INSERT INTO Zakaznik(MENO, PRIEZVISKO, TELEFONNE_CISLO, EMAIL, ADRESA_DORUCENIA, KRAJINA, FAKTURACNA_ADRESA, ZAKAZNIK_ID) VALUES ('Lucia','Dziewičová','0908299802','lucia.dziewic@gmail.com','Veličná 319, Dolný Kubín 04513', 'Slovensko','','0235496124');
+
+
+/*TABULKA WISHLIST*/
+CREATE TABLE Zoznam_priani(
+
+	ZOZNAM_ID       INT,
+	ZAKAZNIK_ID     NUMERIC(10,0) 		REFERENCES Zakaznik(ZAKAZNIK_ID),
+	PRODUKT_ID 		INT 		        REFERENCES Produkt(PRODUKT_ID)
+
+);
+
+/*INSERT WISHLIST*/
+INSERT INTO Zoznam_priani(ZOZNAM_ID, ZAKAZNIK_ID, PRODUKT_ID) VALUES ('25468','9161426418',8);
+INSERT INTO Zoznam_priani(ZOZNAM_ID, ZAKAZNIK_ID, PRODUKT_ID) VALUES ('25468','9161426418',1);
+INSERT INTO Zoznam_priani(ZOZNAM_ID, ZAKAZNIK_ID, PRODUKT_ID) VALUES ('25468','9161426418',7);
+INSERT INTO Zoznam_priani(ZOZNAM_ID, ZAKAZNIK_ID, PRODUKT_ID) VALUES ('36497','9807254633',5);
+INSERT INTO Zoznam_priani(ZOZNAM_ID, ZAKAZNIK_ID, PRODUKT_ID) VALUES ('36497','9807254633',2);
+INSERT INTO Zoznam_priani(ZOZNAM_ID, ZAKAZNIK_ID, PRODUKT_ID) VALUES ('97421','9807254633',4);
+INSERT INTO Zoznam_priani(ZOZNAM_ID, ZAKAZNIK_ID, PRODUKT_ID) VALUES ('65972','6610016169',5);
+INSERT INTO Zoznam_priani(ZOZNAM_ID, ZAKAZNIK_ID, PRODUKT_ID) VALUES ('65972','6610016169',7);
+INSERT INTO Zoznam_priani(ZOZNAM_ID, ZAKAZNIK_ID, PRODUKT_ID) VALUES ('36977','0235496124',1);
+INSERT INTO Zoznam_priani(ZOZNAM_ID, ZAKAZNIK_ID, PRODUKT_ID) VALUES ('36977','0235496124',3);
+
+
+/*TABULKA FAKTURA*/
+CREATE TABLE Faktura(
+
+	FAKTURA_ID	        NUMERIC(10,0) 		    PRIMARY KEY,
+	CAS_VYTVORENIA      TIMESTAMP,
+	POBOCKA_ID          INT 			REFERENCES Pobocka(POBOCKA_ID),
+	ZAKAZNIK_ID         NUMERIC(10,0) 	REFERENCES Zakaznik(ZAKAZNIK_ID),
+	ZAMESTNANEC_ID	    INT 		    REFERENCES Zamestnanec(ZAMESTNANEC_ID),
+	PRODUKT_ID 			INT 		    REFERENCES Produkt(PRODUKT_ID)
+
+);
+
+/*INSERT FAKTUR*/
+INSERT INTO Faktura(FAKTURA_ID, CAS_VYTVORENIA, POBOCKA_ID, ZAKAZNIK_ID, ZAMESTNANEC_ID, PRODUKT_ID) VALUES ('321456','2022-03-23 14:56',1,'9161426418','0123',8);
+INSERT INTO Faktura(FAKTURA_ID, CAS_VYTVORENIA, POBOCKA_ID, ZAKAZNIK_ID, ZAMESTNANEC_ID, PRODUKT_ID) VALUES ('321457','2022-03-20 05:17',4,'0235496124','0454',4);
+INSERT INTO Faktura(FAKTURA_ID, CAS_VYTVORENIA, POBOCKA_ID, ZAKAZNIK_ID, ZAMESTNANEC_ID, PRODUKT_ID) VALUES ('321458','2022-02-17 17:31',6,'9807254633','0612',7);
+INSERT INTO Faktura(FAKTURA_ID, CAS_VYTVORENIA, POBOCKA_ID, ZAKAZNIK_ID, ZAMESTNANEC_ID, PRODUKT_ID) VALUES ('321459','2022-03-15 11:23',1,'6610016169','0124',5);
+INSERT INTO Faktura(FAKTURA_ID, CAS_VYTVORENIA, POBOCKA_ID, ZAKAZNIK_ID, ZAMESTNANEC_ID, PRODUKT_ID) VALUES ('321460','2022-04-01 19:42',1,'9161426418','0123',1);
+
+
+/*TABULKA OBJEDNAVOK*/
+CREATE TABLE Objednavky(
+
+    OBJEDNAVKY_ID   INT     PRIMARY KEY,
+    ZAKAZNIK_ID     NUMERIC(10,0)     REFERENCES Zakaznik(ZAKAZNIK_ID),
+    FAKTURA_ID      NUMERIC(10,0)     REFERENCES Faktura(FAKTURA_ID)
+
+);
+
+/*INSERT OBJEDNAVOK*/
+INSERT INTO Objednavky(OBJEDNAVKY_ID, ZAKAZNIK_ID, FAKTURA_ID) VALUES ('456','9161426418','321456');
+INSERT INTO Objednavky(OBJEDNAVKY_ID, ZAKAZNIK_ID, FAKTURA_ID) VALUES ('457','0235496124','321457');
+INSERT INTO Objednavky(OBJEDNAVKY_ID, ZAKAZNIK_ID, FAKTURA_ID) VALUES ('458','9807254633','321458');
+INSERT INTO Objednavky(OBJEDNAVKY_ID, ZAKAZNIK_ID, FAKTURA_ID) VALUES ('459','6610016169','321459');
+INSERT INTO Objednavky(OBJEDNAVKY_ID, ZAKAZNIK_ID, FAKTURA_ID) VALUES ('460','9161426418','321460');
+
+/*EASY SELECT--
+-- Výpis zoznamu mien zamestnancov, ktorí sú narodení pred rokom 1990 vrátane*/
+CREATE VIEW MladiciZamestnanci AS SELECT MENO, PRIEZVISKO AS "MENO A PRIEZVISKO" FROM ZAMESTNANEC WHERE RODNE_CISLO/100000000 <= 90;
+
+/*Vypisanie zoznamu mien zakaznikov ktorí maju vo svojej adrese slovo "Slovensko"*/
+CREATE VIEW Slovaci AS SELECT MENO, PRIEZVISKO AS "MENO A PRIEZVISKO" FROM ZAKAZNIK WHERE Zakaznik.KRAJINA ~ '.*(Slovensko).*';
+
+/*CONNECT TABLES--
+-- Vypisanie celkovej ceny produtov z faktury cislo 1*/
+CREATE VIEW CelkovaCena1 AS SELECT SUM(CENA) AS "CELKOVA CENA" FROM Produkt INNER JOIN Faktura ON Faktura.PRODUKT_ID=Produkt.PRODUKT_ID AND Faktura.FAKTURA_ID = '1';
+
+/*Vypisanie Zoznamov priani s prislušnym menom zakaznika a nazvom produktu v zazname zoznamu, zoradene podla id zoznamu*/
+CREATE VIEW Wishlist AS SELECT Zoznam_priani.ZOZNAM_ID AS "Identifikator zoznamu",Zakaznik.MENO, PRIEZVISKO AS "Meno a Priezvisko",Produkt.NAZOV AS "Nazov produktu" FROM Zoznam_priani INNER JOIN Zakaznik ON Zoznam_priani.ZAKAZNIK_ID=Zakaznik.ZAKAZNIK_ID INNER JOIN Produkt ON Zoznam_priani.PRODUKT_ID=Produkt.PRODUKT_ID ORDER BY Zoznam_priani.ZOZNAM_ID ASC;
+
+/*ja už nevieeeem ako som to myslela...*/
+CREATE view FakturaZakaznika AS SELECT MENO, PRIEZVISKO from Zakaznik INNER JOIN Faktura on Faktura.ZAKAZNIK_ID = Zakaznik.ZAKAZNIK_ID;
+
+/*AGREGATION
+
+-- Zobrazí Meno a priezvisko najstaršieho zamestnanca*/
+CREATE VIEW NajstarsiZamestnanec AS SELECT MENO AS "Meno najstaršieho" FROM Zamestnanec  ORDER BY RODNE_CISLO ASC;
+
+/*nájdi faktury, ktore majú celkovu sumu vacsiu ako 1000 a zakaznikov zorad vzostupne*/
+    /*CREATE VIEW ViacAko AS SELECT SUM(CENA) from Produkt where SUM(CENA)>1000*/

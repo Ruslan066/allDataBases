@@ -1,0 +1,201 @@
+--3 odovzdavka
+----1 pohľad s použitím množinových operácií
+--zobraziť všetky Pokuty z miest Kosice a Bratislava
+create view pokuty_ke_ba as
+select p.Datum, p.Dovod, p.Suma
+from Pokuta p
+join Policajt P2 on P2.id_policajta = p.id_policajta
+intersect
+select p.Datum, p.Dovod, p.Suma
+from Pokuta p
+join oddelenie o on p.id_oddelenia = o.id_oddelenia
+where o.mesto in('Kosice', 'Bratislava')
+order by Datum asc;
+--zobraziť všetky obcan, suma pokuty ktorej >50 a ne nachadza v mieste Poprad
+create view pokuty_pd as
+select concat(o.Meno,' ',o.Priezvisko) as "obcan", o.Tel_kontakt, p.Suma, p.Dovod
+from Pokuta p
+join dostal d on p.id_pokuty = d.id_pokuty
+join obcan o on d.id_obcana = o.id_obcana
+where p.Suma >50
+except
+select concat(o.Meno,' ',o.Priezvisko) as "obcan", o.Tel_kontakt, p.Suma, p.Dovod
+from Pokuta p
+join dostal d on p.id_pokuty = d.id_pokuty
+join obcan o on d.id_obcana = o.id_obcana
+join oddelenie o2 on p.id_oddelenia = o2.id_oddelenia
+where o2.mesto in('Poprad')
+order by "obcan" asc;
+----2 pohľady s použitím vnorených poddopytov.
+--zobraziť všetky policajt z oddelenie ktore ma najviac pokut
+create view policajttop as
+select O.Mesto, concat(p.Meno,' ',p.Priezvisko) as "policajt"
+from policajt p
+join Oddelenie O on O.id_oddelenia = p.id_oddelenia
+where p.id_oddelenia = (
+    select t.id_oddelenia
+    from (
+        select o.id_oddelenia, count(p2.id_pokuty)
+        from oddelenie o
+        join pokuta p2 on o.id_oddelenia = p2.id_oddelenia
+        group by o.id_oddelenia
+        order by count(p2.id_pokuty) desc
+         ) as t
+    limit 1
+);
+--zobraziť všetky policajt ktory vydal pokutu obcan z telefón cislo '+421917823', '+421935162', '+421942876'
+create view tel_cislo as
+select o.Mesto, concat(p.Meno,' ',p.Priezvisko) as "policajt"
+from policajt p
+join oddelenie o on p.id_oddelenia = o.id_oddelenia
+where exists(
+    select *
+    from obcan o2
+    join dostal d on o2.id_obcana = d.id_obcana
+    join Pokuta P2 on P2.id_pokuty = d.id_pokuty
+    where o2.Tel_kontakt in('+421917823', '+421935162', '+421942876') and p.id_policajta = P2.id_policajta
+          );
+----skript na vytvorenie triggeru/triggerov, ktoré budú implementovať autoinkrementáciu umelých kľúčov
+--autoinkrementácia umelých kľúčov oddelenie
+create or replace function oddelenieAutoinc() returns trigger as
+$$
+    declare
+    new_id int;
+    begin
+        select max(id_oddelenia) into new_id from oddelenie;
+
+        if (new_id) is null and new.id_oddelenia is null then
+            new.id_oddelenia = 1;
+        end if;
+        new_id = new_id+1;
+
+        if new.id_oddelenia is null then
+            new.id_oddelenia = new_id;
+        end if;
+
+        if( select id_oddelenia from oddelenie
+        where new.id_oddelenia  in(id_oddelenia)) is not null then
+            new.id_oddelenia = new_id;
+        end if;
+        raise notice 'insert new id %', new_id;
+        return new;
+    end;
+    $$
+language plpgsql;
+
+create trigger autoIncCity before insert on oddelenie
+    for each row
+    execute procedure oddelenieAutoinc();
+
+INSERT INTO "oddelenie"(Mesto, Nacelnik_meno, Nacelnik_priezvisko)
+VALUES ('Michalovce', 'Peter', 'Ton');
+
+----skript na aspoň dva zmysluplné triggre (okrem triggerov na autoinkrementáciu)
+--aktualizuje nové hodnoty do view a tubulek
+create or replace view pokuty_view as
+select o.Mesto, p.id_pokuty, p.Suma, p.Dovod, p.id_policajta
+from pokuta p
+join oddelenie o on p.id_oddelenia = o.id_oddelenia
+order by o.Mesto;
+
+create or replace function upd_pokuty_view() returns trigger as
+    $$
+    declare
+        id_o int;
+    begin
+        if(select count(*) from oddelenie where mesto in (new.Mesto)) = 0 then
+            raise exception 'update Error! takéto mesto neexistuje';
+        end if ;
+        select o.id_oddelenia into id_o
+        from oddelenie o
+        join pokuta p on o.id_oddelenia = p.id_oddelenia
+        where mesto = new.Mesto;
+
+        update pokuta set suma = new.Suma,
+                          dovod = new.Dovod,
+                          id_pokuty = new.id_pokuty,
+                          id_oddelenia = id_o,
+                          id_policajta = new.id_policajta
+                          where id_pokuty = old.id_pokuty;
+    return new;
+    end;
+    $$
+language plpgsql;
+
+create trigger udp_pokuty_view_t instead of update on pokuty_view
+    for each row
+    execute procedure upd_pokuty_view();
+
+update pokuty_view set mesto = 'Poprad', suma = 90 where id_pokuty = 9;
+
+--prida nové hodnoty do view a tubulek
+create or replace function add_new_pokuty_view() returns trigger as
+    $$
+    declare
+        id_o int;
+        id_p int;
+    begin
+        if(select count(*) from oddelenie where mesto in (new.Mesto)) = 0 then
+            raise exception 'update Error! takéto mesto neexistuje';
+        end if ;
+        select o.id_oddelenia into id_o
+        from oddelenie o
+        join pokuta p on o.id_oddelenia = p.id_oddelenia
+        where mesto = new.Mesto;
+
+        select max(id_pokuty)+1 into id_p from pokuta;
+
+        insert into pokuta(id_pokuty, Dovod, Datum, Suma, id_policajta, id_oddelenia)
+        values (id_p, new.Dovod, current_date, new.Suma, new.id_policajta, id_o);
+    return new;
+    end;
+    $$
+language plpgsql;
+
+create trigger addNew_pokuty_view_t instead of insert on pokuty_view
+    for each row
+    execute procedure add_new_pokuty_view();
+
+insert into pokuty_view (Mesto, Suma, Dovod, id_policajta)
+values ('Bratislava', 50, 'Parkovanie na chodniku', 8);
+
+----skript na aspoň jednu storovanú procedúru a jednu funkciu
+--pridať novú oddelenie
+create or replace procedure add_oddelenie(Mesto_ varchar, Nacelnik_meno_ varchar, Nacelnik_priezvisko_ varchar) as
+    $$
+    begin
+        insert into oddelenie(Mesto, Nacelnik_meno, Nacelnik_priezvisko)
+        values (Mesto_, Nacelnik_meno_, Nacelnik_priezvisko_);
+    end;
+    $$
+language plpgsql;
+
+call add_oddelenie('Presov', 'Matus', 'Don');
+--aktualizuje Sum konkrétnej pokuty
+create or replace procedure udp_pokuta_sum(id_p int, sum int) as
+    $$
+    begin
+        update pokuta set suma = sum where id_pokuty = id_p;
+    end;
+    $$
+language plpgsql;
+
+call udp_pokuta_sum(1, 50);
+--zobrazí súčet všetkých pokút obcana
+create or replace function sum_pokut(tel_c varchar(11)) returns integer as
+    $$
+    declare
+        ssum int;
+    begin
+        select sum(Suma) into ssum from pokuta
+        join dostal d on Pokuta.id_pokuty = d.id_pokuty
+        join obcan o on d.id_obcana = o.id_obcana
+        where o.tel_kontakt = tel_c
+        order by sum(Suma)
+        limit 1;
+        return ssum;
+    end;
+    $$
+language plpgsql;
+
+select sum_pokut('+421952374');
